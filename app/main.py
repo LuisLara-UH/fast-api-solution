@@ -3,6 +3,12 @@ from typing import List
 from pydantic import BaseModel
 import uvicorn
 
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from fastapi_cache.decorator import cache
+
+from redis import asyncio as aioredis
+
 app = FastAPI()
 
 class Order(BaseModel):
@@ -17,13 +23,20 @@ class Order(BaseModel):
 
 class Request(BaseModel):
     criterion: str
-    orders: set[Order] = set()
+    orders: List[Order]
 
 
+@app.on_event("startup")
+async def startup():
+    redis = aioredis.from_url("redis://localhost", encoding="utf8", decode_responses=True)
+    FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
+    
+@cache
 @app.post("/solution/")
 async def process_orders(request: Request):
     for order in request.orders:
         validate(order)
+
     filtered_orders = filter(request.orders, request.criterion)
     return sum([order.price * order.quantity for order in filtered_orders])
 
