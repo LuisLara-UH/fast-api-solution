@@ -32,7 +32,7 @@ async def startup():
     FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
     
 @cache
-@app.post("/solution/")
+@app.post("/solution")
 async def process_orders(request: Request):
     for order in request.orders:
         validate(order)
